@@ -37,10 +37,10 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	dogs := strings.Split(*dogsFlag, ",")
-	selectedDogs := make(map[string]bool)
-	for _, dog := range dogs {
-		selectedDogs[strings.ToLower(dog)] = true
+	selectedDogs := strings.Split(*dogsFlag, ",")
+	dogs := make([]string, len(selectedDogs), len(selectedDogs))
+	for i, dog := range selectedDogs {
+		dogs[i] = strings.ToLower(dog)
 	}
 
 	availableDogs := colly.NewCollector()
@@ -50,7 +50,14 @@ func main() {
 	availableDogs.OnHTML(".pet-link", func(e *colly.HTMLElement) {
 		dogName := e.ChildText("h3")
 		currentDog = strings.ToLower(dogName)
-		if selectedDogs[currentDog] {
+		dogMatch := false
+		for _, dog := range dogs {
+			if strings.Contains(currentDog, dog) {
+				dogMatch = true
+				break
+			}
+		}
+		if dogMatch {
 			if err := makeDir(*baseDirectory + "/" + currentDog); err != nil {
 				log.Println(err)
 				return
@@ -59,6 +66,9 @@ func main() {
 			fullDescription := e.ChildText(".pet-description-full")
 			index := strings.Index(fullDescription, adoptionText)
 			desc := fullDescription[:index]
+			desc += "\n"
+			desc += `👇👇SUBMIT AN APPLICATION HERE: 👇👇
+https://2babrescue.com/adoption-fees-info`
 			descFile := *baseDirectory + "/" + currentDog + "/description.txt"
 			if err := ioutil.WriteFile(descFile, []byte(desc), os.ModePerm); err != nil {
 				log.Println(err)
