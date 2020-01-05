@@ -4,6 +4,9 @@ the CLI tool. Description and images are saved to the specified location.
 
 Currently the tool only works for the Foster Organization [2 Blondes All Breed Rescue](https://2babrescue.com/).
 
+## Download
+Visit the [Releases](https://github.com/Piszmog/pet-spotlight/releases) page to download the binary for your system.
+
 ## Running
 To run the CLI the following flags are required,
 
