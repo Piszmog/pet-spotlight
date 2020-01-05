@@ -20,3 +20,8 @@
 *.ipr
 
 /vendor
+
+### Binaries ###
+*-linux
+*-mac
+*.exe
