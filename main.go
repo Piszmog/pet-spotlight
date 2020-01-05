@@ -8,12 +8,6 @@ import (
 	"strings"
 )
 
-const (
-	baseURL       = "https://www.petstablished.com"
-	twoBlondesURL = "/organization/80925"
-	adoptionText  = "Adoption fee includes the following"
-)
-
 func main() {
 	// Setup flags
 	dogsFlag := flag.String("d", "", "A comma separate list of availableDogs to extract")

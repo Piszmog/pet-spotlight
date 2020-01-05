@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+const (
+	baseURL       = "https://www.petstablished.com"
+	twoBlondesURL = "/organization/80925"
+	adoptionText  = "Adoption fee includes the following"
+)
+
 // Run starts scrapping the description and the pictures of the specified dogs to the specified directory.
 // First, it must match the specified dog names against all available dogs on the web page. When it finds a match
 // it will grab the description of the dog and visit the dog's personal information page.
