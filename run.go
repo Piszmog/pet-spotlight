@@ -11,10 +11,19 @@ import (
 )
 
 const (
-	baseURL       = "https://www.petstablished.com"
-	twoBlondesURL = "/organization/80925"
-	adoptionText  = "Adoption fee includes the following"
-	showLessText  = "show less"
+	baseURL                = "https://www.petstablished.com"
+	twoBlondesURL          = "/organization/80925"
+	adoptionText           = "Adoption fee includes the following"
+	showLessText           = "show less"
+	fosterText             = "Foster"
+	petLinkClass           = ".pet-link"
+	header3                = "h3"
+	clientsId              = "#oc-clients"
+	petDescriptionClass    = ".pet-description-full"
+	petContainerClass      = ".pet-container"
+	urlLink                = "href"
+	petGalleryClass        = ".pet-gallery-thumb"
+	petGalleryURLAttribute = "data-pet-gallery-url"
 )
 
 // RunDogDownloads starts scrapping the description and the pictures of the specified dogs to the specified directory.
@@ -29,8 +38,8 @@ func RunDogDownloads(dogs []string, baseDirectory string) error {
 	// Save the current dog to use when downloading pictures
 	var currentDog string
 	// Handle when the page of all the available dogs is loaded
-	availableDogs.OnHTML(".pet-link", func(e *colly.HTMLElement) {
-		dogName := e.ChildText("h3")
+	availableDogs.OnHTML(petLinkClass, func(e *colly.HTMLElement) {
+		dogName := e.ChildText(header3)
 		currentDog = strings.ToLower(dogName)
 		dogMatch := isMatch(dogs, currentDog)
 		// If a match then create dir and description.txt file
@@ -40,7 +49,7 @@ func RunDogDownloads(dogs []string, baseDirectory string) error {
 				return
 			}
 			log.Println("Found", dogName)
-			fullDescription := e.ChildText(".pet-description-full")
+			fullDescription := e.ChildText(petDescriptionClass)
 			// Remove the adoption fee part
 			index := strings.Index(fullDescription, adoptionText)
 			var desc string
@@ -59,7 +68,7 @@ https://2babrescue.com/adoption-fees-info`
 				return
 			}
 			// Get the link to the dog's page to download pictures
-			link := e.Attr("href")
+			link := e.Attr(urlLink)
 			if err := dogPictures.Visit(baseURL + link); err != nil {
 				log.Println(err)
 				return
@@ -68,8 +77,8 @@ https://2babrescue.com/adoption-fees-info`
 	})
 
 	// When the dog page is loaded, download pictures
-	dogPictures.OnHTML("#oc-clients", func(e *colly.HTMLElement) {
-		imageURLs := e.ChildAttrs(".pet-gallery-thumb", "data-pet-gallery-url")
+	dogPictures.OnHTML(clientsId, func(e *colly.HTMLElement) {
+		imageURLs := e.ChildAttrs(petGalleryClass, petGalleryURLAttribute)
 		// Save all the images
 		for index, imageURL := range imageURLs {
 			imagePath := fmt.Sprintf("%s/%s", baseDirectory, currentDog)
@@ -109,17 +118,17 @@ func RunFosters() error {
 	var fosters []string
 
 	// Handle when the page of all the available dogs is loaded
-	availableDogs.OnHTML(".pet-container", func(e *colly.HTMLElement) {
+	availableDogs.OnHTML(petContainerClass, func(e *colly.HTMLElement) {
 		var dogName string
 		dom := e.DOM
-		dom.Find(".pet-link").Each(func(i int, selection *goquery.Selection) {
-			dogName = strings.TrimSpace(selection.Find("h3").Text())
+		dom.Find(petLinkClass).Each(func(i int, selection *goquery.Selection) {
+			dogName = strings.TrimSpace(selection.Find(header3).Text())
 		})
 		var buttonName string
 		dom.Find(".actions").Each(func(i int, selection *goquery.Selection) {
 			buttonName = selection.Find(".button").Text()
 		})
-		if strings.Contains(buttonName, "Foster") {
+		if strings.Contains(buttonName, fosterText) {
 			fosters = append(fosters, dogName)
 		}
 	})
