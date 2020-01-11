@@ -14,6 +14,7 @@ const (
 	baseURL       = "https://www.petstablished.com"
 	twoBlondesURL = "/organization/80925"
 	adoptionText  = "Adoption fee includes the following"
+	showLessText  = "show less"
 )
 
 // RunDogDownloads starts scrapping the description and the pictures of the specified dogs to the specified directory.
@@ -42,7 +43,12 @@ func RunDogDownloads(dogs []string, baseDirectory string) error {
 			fullDescription := e.ChildText(".pet-description-full")
 			// Remove the adoption fee part
 			index := strings.Index(fullDescription, adoptionText)
-			desc := fullDescription[:index]
+			var desc string
+			if index < 0 {
+				desc = fullDescription[:strings.Index(fullDescription, showLessText)]
+			} else {
+				desc = fullDescription[:index]
+			}
 			// Add the link for adopting
 			desc += "\n"
 			desc += `👇👇SUBMIT AN APPLICATION HERE: 👇👇
