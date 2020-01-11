@@ -37,13 +37,18 @@ func RunDogDownloads(dogs []string, baseDirectory string) error {
 
 	// Save the current dog to use when downloading pictures
 	var currentDog string
+	dogsDownloaded := 0
 	// Handle when the page of all the available dogs is loaded
 	availableDogs.OnHTML(petLinkClass, func(e *colly.HTMLElement) {
+		if dogsDownloaded == len(dogs) {
+			return
+		}
 		dogName := e.ChildText(header3)
 		currentDog = strings.ToLower(dogName)
 		dogMatch := isMatch(dogs, currentDog)
 		// If a match then create dir and description.txt file
 		if dogMatch {
+			dogsDownloaded++
 			if err := io.MakeDir(baseDirectory + "/" + currentDog); err != nil {
 				log.Println(err)
 				return
