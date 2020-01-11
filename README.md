@@ -12,6 +12,7 @@ To run the CLI the following flags are required,
 
 * `-d` - a comma separated list of dogs to download information for -- e.g. `Boomer,Zodiac`
 * `-l` - the base directory to save the information on the dogs -- e.g. `dogs`
+* `-f` - determines if the list of dogs to foster should be printed
 
 ### Example
 Example of running the help flag `-h`
@@ -21,8 +22,9 @@ Example of running the help flag `-h`
 Usage of pet-spotlight.exe:
   -d string
         A comma separate list of availableDogs to extract
+  -f    Determines whether to list all of the dogs that need fosters
   -l string
-        Location to place data on the extracted dogs\
+        Location to place data on the extracted dogs
 ```
 
 Example of running
