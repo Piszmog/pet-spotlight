@@ -57,7 +57,7 @@ func validateFlags(f flags) bool {
 		fmt.Println("Missing flag '-l'")
 		flag.Usage()
 		return false
-	} else if !f.determineFosters {
+	} else if !f.determineFosters && len(f.dogs) == 0 && len(f.baseDirectory) == 0 {
 		fmt.Println("No flags provided")
 		flag.Usage()
 		return false

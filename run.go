@@ -66,7 +66,7 @@ https://2babrescue.com/adoption-fees-info`
 		imageURLs := e.ChildAttrs(".pet-gallery-thumb", "data-pet-gallery-url")
 		// Save all the images
 		for index, imageURL := range imageURLs {
-			imagePath := fmt.Sprintf("%s/%s/image-%d.png", baseDirectory, currentDog, index)
+			imagePath := fmt.Sprintf("%s/%s", baseDirectory, currentDog)
 			imageFile := fmt.Sprintf("image-%d.png", index)
 			if err := http.DownloadImage(imageURL, imagePath, imageFile); err != nil {
 				log.Println(err)
@@ -94,6 +94,7 @@ func isMatch(dogs []string, currentDog string) bool {
 	return dogMatch
 }
 
+// RunFosters looks up all the dogs that are foster-able and prints a comma separated list of the dogs.
 func RunFosters() error {
 	// Create the scrappers
 	availableDogs := colly.NewCollector()
