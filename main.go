@@ -36,7 +36,7 @@ func main() {
 		if err := io.MakeDir(f.baseDirectory); err != nil {
 			log.Fatalln(err)
 		}
-		dogs := createDogList(f.dogs)
+		dogs := createDogMap(f.dogs)
 		if err := RunDogDownloads(dogs, f.baseDirectory); err != nil {
 			log.Fatalln(err)
 		}
@@ -65,11 +65,11 @@ func validateFlags(f flags) bool {
 	return true
 }
 
-func createDogList(dogsFlag string) []string {
+func createDogMap(dogsFlag string) map[string]bool {
 	selectedDogs := strings.Split(dogsFlag, ",")
-	dogs := make([]string, len(selectedDogs), len(selectedDogs))
-	for i, dog := range selectedDogs {
-		dogs[i] = strings.ToLower(dog)
+	dogs := make(map[string]bool)
+	for _, dog := range selectedDogs {
+		dogs[strings.ToLower(dog)] = false
 	}
 	return dogs
 }

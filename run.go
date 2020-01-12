@@ -30,7 +30,7 @@ const (
 // First, it must match the specified dog names against all available dogs on the web page. When it finds a match
 // it will grab the description of the dog and visit the dog's personal information page.
 // On the personal page, it will download all images there are of the dog.
-func RunDogDownloads(dogs []string, baseDirectory string) error {
+func RunDogDownloads(dogs map[string]bool, baseDirectory string) error {
 	// Create the scrappers
 	availableDogs := colly.NewCollector()
 	dogPictures := availableDogs.Clone()
@@ -103,12 +103,15 @@ https://2babrescue.com/adoption-fees-info`
 	return availableDogs.Visit(baseURL + twoBlondesURL)
 }
 
-func isMatch(dogs []string, currentDog string) bool {
+func isMatch(dogs map[string]bool, currentDog string) bool {
 	dogMatch := false
-	for _, dog := range dogs {
-		if strings.Contains(currentDog, dog) {
-			dogMatch = true
-			break
+	for dog, alreadyDownloaded := range dogs {
+		if !alreadyDownloaded {
+			if strings.Contains(currentDog, dog) {
+				dogMatch = true
+				dogs[dog] = true
+				break
+			}
 		}
 	}
 	return dogMatch
