@@ -11,19 +11,22 @@ import (
 )
 
 const (
-	baseURL                = "https://www.petstablished.com"
-	twoBlondesURL          = "/organization/80925"
 	adoptionText           = "Adoption fee includes the following"
-	showLessText           = "show less"
-	fosterText             = "Foster"
-	petLinkClass           = ".pet-link"
-	header3                = "h3"
+	baseURL                = "https://www.petstablished.com"
 	clientsId              = "#oc-clients"
+	errorClass             = ".error"
+	fosterText             = "Foster"
+	header3                = "h3"
+	maxPages               = 100
 	petDescriptionClass    = ".pet-description-full"
 	petContainerClass      = ".pet-container"
-	urlLink                = "href"
 	petGalleryClass        = ".pet-gallery-thumb"
 	petGalleryURLAttribute = "data-pet-gallery-url"
+	petLinkClass           = ".pet-link"
+	showLessText           = "show less"
+	twoBlondesPath         = "/organization/80925"
+	urlLink                = "href"
+	widgetPage             = "/widget/dogs?page=%d"
 )
 
 // RunDogDownloads starts scrapping the description and the pictures of the specified dogs to the specified directory.
@@ -38,6 +41,13 @@ func RunDogDownloads(dogs map[string]bool, baseDirectory string) error {
 	// Save the current dog to use when downloading pictures
 	var currentDog string
 	dogsDownloaded := 0
+	lastPageReached := false
+
+	// Handle when last page is reached
+	availableDogs.OnHTML(errorClass, func(e *colly.HTMLElement) {
+		lastPageReached = true
+	})
+
 	// Handle when the page of all the available dogs is loaded
 	availableDogs.OnHTML(petLinkClass, func(e *colly.HTMLElement) {
 		if dogsDownloaded == len(dogs) {
@@ -74,7 +84,7 @@ https://2babrescue.com/adoption-fees-info`
 			}
 			// Get the link to the dog's page to download pictures
 			link := e.Attr(urlLink)
-			if err := dogPictures.Visit(baseURL + link); err != nil {
+			if err := dogPictures.Visit(link); err != nil {
 				log.Println(err)
 				return
 			}
@@ -94,13 +104,20 @@ https://2babrescue.com/adoption-fees-info`
 		}
 	})
 
-	// Log when the request is being made
-	availableDogs.OnRequest(func(request *colly.Request) {
-		log.Println("Starting extraction...")
-	})
-
 	// Start scrapping
-	return availableDogs.Visit(baseURL + twoBlondesURL)
+	log.Println("Starting extraction...")
+	for i := 1; i < maxPages && !lastPageReached; i++ {
+		page := fmt.Sprintf(widgetPage, i)
+		if err := availableDogs.Visit(baseURL + twoBlondesPath + page); err != nil {
+			return err
+		}
+	}
+	for name, found := range dogs {
+		if !found {
+			log.Printf("Failed to find %s", name)
+		}
+	}
+	return nil
 }
 
 func isMatch(dogs map[string]bool, currentDog string) bool {
@@ -147,7 +164,7 @@ func RunFosters() error {
 	})
 
 	// Start scrapping
-	if err := availableDogs.Visit(baseURL + twoBlondesURL); err != nil {
+	if err := availableDogs.Visit(baseURL + twoBlondesPath); err != nil {
 		return err
 	}
 	printDogs(fosters)
