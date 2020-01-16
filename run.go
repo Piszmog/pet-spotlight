@@ -141,6 +141,12 @@ func RunFosters() error {
 
 	// List of dogs to be fostered
 	var fosters []string
+	lastPageReached := false
+
+	// Handle when last page is reached
+	availableDogs.OnHTML(errorClass, func(e *colly.HTMLElement) {
+		lastPageReached = true
+	})
 
 	// Handle when the page of all the available dogs is loaded
 	availableDogs.OnHTML(petContainerClass, func(e *colly.HTMLElement) {
@@ -158,14 +164,13 @@ func RunFosters() error {
 		}
 	})
 
-	// Log when the request is being made
-	availableDogs.OnRequest(func(request *colly.Request) {
-		log.Println("Starting foster lookup...")
-	})
-
 	// Start scrapping
-	if err := availableDogs.Visit(baseURL + twoBlondesPath); err != nil {
-		return err
+	log.Println("Starting foster lookup...")
+	for i := 1; i < maxPages && !lastPageReached; i++ {
+		page := fmt.Sprintf(widgetPage, i)
+		if err := availableDogs.Visit(baseURL + twoBlondesPath + page); err != nil {
+			return err
+		}
 	}
 	printDogs(fosters)
 	return nil
