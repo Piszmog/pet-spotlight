@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 )
 
@@ -27,9 +26,9 @@ func WriteFile(content string, file string) error {
 }
 
 // CopyFile copies the content to the file.
-func CopyToFile(content io.Reader, f *os.File) error {
-	if _, err := io.Copy(f, content); err != nil {
-		return fmt.Errorf("failed to copy content to file %s: %w", f.Name(), err)
+func CopyToFile(content io.Reader, w io.Writer) error {
+	if _, err := io.Copy(w, content); err != nil {
+		return fmt.Errorf("failed to copy content to file: %w", err)
 	}
 	return nil
 }
@@ -37,6 +36,6 @@ func CopyToFile(content io.Reader, f *os.File) error {
 // CloseResource closes the provided closer.
 func CloseResource(c io.Closer) {
 	if err := c.Close(); err != nil {
-		log.Println(err)
+		fmt.Println(err)
 	}
 }

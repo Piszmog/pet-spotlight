@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"pet-spotlight/io"
-	"strings"
+	"time"
 )
 
 type flags struct {
@@ -30,19 +30,19 @@ func main() {
 	if !validateFlags(f) {
 		return
 	}
+	defer runtime(time.Now())
 
 	if len(f.dogs) != 0 {
 		// Create directory where the dog info will go
 		if err := io.MakeDir(f.baseDirectory); err != nil {
 			log.Fatalln(err)
 		}
-		dogs := createDogMap(f.dogs)
-		if err := RunDogDownloads(dogs, f.baseDirectory); err != nil {
+		if err := RunDogDownloads(f.dogs, f.baseDirectory); err != nil {
 			log.Fatalln(err)
 		}
 	}
 	if f.determineFosters {
-		if err := RunFosters(); err != nil {
+		if err := RunGetFosters(); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -65,11 +65,6 @@ func validateFlags(f flags) bool {
 	return true
 }
 
-func createDogMap(dogsFlag string) map[string]bool {
-	selectedDogs := strings.Split(dogsFlag, ",")
-	dogs := make(map[string]bool)
-	for _, dog := range selectedDogs {
-		dogs[strings.ToLower(dog)] = false
-	}
-	return dogs
+func runtime(t time.Time) {
+	fmt.Printf("Application ran in %fsec\n", time.Since(t).Seconds())
 }

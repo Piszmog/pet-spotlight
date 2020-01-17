@@ -7,12 +7,12 @@ import (
 	"pet-spotlight/io"
 )
 
-// DownloadImage downloads the file from the specified URL and saves to the provided path as the specified file
+// Download downloads the file from the specified URL and saves to the provided path as the specified file
 // name.
-func DownloadImage(imageURL string, path string, fileName string) error {
-	resp, err := http.Get(imageURL)
+func Download(url string, path string, fileName string) error {
+	resp, err := http.Get(url)
 	if err != nil {
-		return fmt.Errorf("failed to get image from %s: %w", imageURL, err)
+		return fmt.Errorf("failed to get image from %s: %w", url, err)
 	}
 	defer io.CloseResource(resp.Body)
 	imagePath := fmt.Sprintf("%s/%s", path, fileName)
