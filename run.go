@@ -7,6 +7,7 @@ import (
 	"pet-spotlight/http"
 	"pet-spotlight/io"
 	"pet-spotlight/sync"
+	"pet-spotlight/wait"
 	"sort"
 	"strings"
 )
@@ -45,25 +46,25 @@ func RunDogDownloads(dogs string, baseDirectory string) error {
 	dogMap := createDogMap(dogs)
 	// Create the scrappers
 	availableDogs := colly.NewCollector(colly.Async(true))
-	if err := availableDogs.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 5}); err != nil {
+	if err := availableDogs.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 10}); err != nil {
 		return fmt.Errorf("failed to set parallel limit: %w", err)
 	}
-	dogPictures := colly.NewCollector(colly.Async(true))
-	if err := dogPictures.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 10}); err != nil {
-		return fmt.Errorf("failed to set parallel limit: %w", err)
-	}
+	dogPictures := availableDogs.Clone()
 
 	// Save the current dog to use when downloading pictures
-	lastPageReached := sync.LastPage{}
+	isDone := sync.AtomicBoolean{}
 
 	// Handle when last page is reached
 	availableDogs.OnHTML(errorClass, func(e *colly.HTMLElement) {
-		lastPageReached.Set(true)
+		isDone.Set(true)
 	})
 
 	// Handle when the page of all the available dogs is loaded
 	availableDogs.OnHTML(petLinkClass, func(e *colly.HTMLElement) {
 		if dogMap.IsCompete() {
+			if !isDone.Get() {
+				isDone.Set(true)
+			}
 			return
 		}
 		name := e.ChildText(header3)
@@ -111,13 +112,12 @@ func RunDogDownloads(dogs string, baseDirectory string) error {
 		dogName := e.Request.Ctx.Get(dogNameContext)
 		imageURLs := e.ChildAttrs(petGalleryClass, petGalleryURLAttribute)
 		// Save all the images
+		wg := wait.NewBoundedWaitGroup(5)
 		for index, imageURL := range imageURLs {
-			imagePath := fmt.Sprintf("%s/%s", baseDirectory, dogName)
-			imageFile := fmt.Sprintf("image-%d.png", index)
-			if err := http.Download(imageURL, imagePath, imageFile); err != nil {
-				fmt.Println(err)
-			}
+			wg.Add(1)
+			go downloadImage(baseDirectory, dogName, index, imageURL, &wg)
 		}
+		wg.Wait()
 	})
 
 	// Handle errors
@@ -132,7 +132,7 @@ func RunDogDownloads(dogs string, baseDirectory string) error {
 
 	// Start scrapping
 	fmt.Println("Starting extraction...")
-	for i := 1; i < maxPages && !lastPageReached.Get(); i++ {
+	for i := 1; i < maxPages && !isDone.Get(); i++ {
 		page := fmt.Sprintf(widgetPage, i)
 		if err := availableDogs.Visit(baseURL + twoBlondesPath + page); err != nil {
 			return err
@@ -149,21 +149,30 @@ func createDogMap(dogsList string) *sync.DogMap {
 	return sync.InitializeMap(selectedDogs)
 }
 
+func downloadImage(baseDirectory string, dogName string, index int, imageURL string, b *wait.BoundedWaitGroup) {
+	defer b.Done()
+	imagePath := fmt.Sprintf("%s/%s", baseDirectory, dogName)
+	imageFile := fmt.Sprintf("image-%d.png", index)
+	if err := http.Download(imageURL, imagePath, imageFile); err != nil {
+		fmt.Println(err)
+	}
+}
+
 // RunGetFosters looks up all the dogs that are foster-able and prints a comma separated list of the dogs.
 func RunGetFosters() error {
 	// Create the scrappers
 	availableDogs := colly.NewCollector(colly.Async(true))
-	if err := availableDogs.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 5}); err != nil {
+	if err := availableDogs.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 10}); err != nil {
 		return fmt.Errorf("failed to set parallel limit: %w", err)
 	}
 
 	// List of dogs to be fostered
 	fosters := sync.DogList{}
-	lastPageReached := sync.LastPage{}
+	isDone := sync.AtomicBoolean{}
 
 	// Handle when last page is reached
 	availableDogs.OnHTML(errorClass, func(e *colly.HTMLElement) {
-		lastPageReached.Set(true)
+		isDone.Set(true)
 	})
 
 	// Handle when the page of all the available dogs is loaded
@@ -184,7 +193,7 @@ func RunGetFosters() error {
 
 	// Start scrapping
 	fmt.Println("Starting foster lookup...")
-	for i := 1; i < maxPages && !lastPageReached.Get(); i++ {
+	for i := 1; i < maxPages && !isDone.Get(); i++ {
 		page := fmt.Sprintf(widgetPage, i)
 		if err := availableDogs.Visit(baseURL + twoBlondesPath + page); err != nil {
 			return err
