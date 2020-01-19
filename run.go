@@ -22,10 +22,11 @@ const (
 	errorClass             = ".error"
 	fosterText             = "Foster"
 	header3                = "h3"
+	linkAttribute          = "href"
 	maxPages               = 100
 	petDescriptionClass    = ".pet-description-full"
 	petContainerClass      = ".pet-container"
-	petGalleryClass        = ".pet-gallery-thumb"
+	petGalleryClass        = ".thumb-img"
 	petGalleryURLAttribute = "data-pet-gallery-url"
 	petLinkClass           = ".pet-link"
 	showLessText           = "show less"
@@ -111,11 +112,18 @@ func RunDogDownloads(dogs string, baseDirectory string) error {
 	dogPictures.OnHTML(clientsId, func(e *colly.HTMLElement) {
 		dogName := e.Request.Ctx.Get(dogNameContext)
 		imageURLs := e.ChildAttrs(petGalleryClass, petGalleryURLAttribute)
+		videoURLs := e.ChildAttrs(petGalleryClass, linkAttribute)
 		// Save all the images
 		wg := wait.NewBoundedWaitGroup(5)
 		for index, imageURL := range imageURLs {
+			imageFile := fmt.Sprintf("image-%d.png", index)
 			wg.Add(1)
-			go downloadImage(baseDirectory, dogName, index, imageURL, &wg)
+			go download(baseDirectory, dogName, imageFile, imageURL, &wg)
+		}
+		for index, videoURL := range videoURLs {
+			videoFile := fmt.Sprintf("video-%d.mp4", index)
+			wg.Add(1)
+			go download(baseDirectory, dogName, videoFile, videoURL, &wg)
 		}
 		wg.Wait()
 	})
@@ -149,12 +157,17 @@ func createDogMap(dogsList string) *sync.DogMap {
 	return sync.InitializeMap(selectedDogs)
 }
 
-func downloadImage(baseDirectory string, dogName string, index int, imageURL string, b *wait.BoundedWaitGroup) {
+func download(baseDirectory string, dogName string, fileName string, url string, b *wait.BoundedWaitGroup) {
 	defer b.Done()
-	imagePath := fmt.Sprintf("%s/%s", baseDirectory, dogName)
-	imageFile := fmt.Sprintf("image-%d.png", index)
-	if err := http.Download(imageURL, imagePath, imageFile); err != nil {
-		fmt.Println(err)
+	directoryPath := fmt.Sprintf("%s/%s", baseDirectory, dogName)
+	if strings.HasSuffix(fileName, "png") {
+		if err := http.Download(url, directoryPath, fileName); err != nil {
+			fmt.Println(err)
+		}
+	} else {
+		if err := http.DownloadVideo(url, directoryPath, fileName); err != nil {
+			fmt.Println(err)
+		}
 	}
 }
 
@@ -189,6 +202,11 @@ func RunGetFosters() error {
 		if strings.Contains(buttonName, fosterText) {
 			fosters.Add(dogName)
 		}
+	})
+
+	// Handle errors
+	availableDogs.OnError(func(r *colly.Response, err error) {
+		fmt.Printf("Request URL: %s, Status Code %d, Error %+v\n", r.Request.URL, r.StatusCode, err)
 	})
 
 	// Start scrapping

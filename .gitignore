@@ -20,6 +20,7 @@
 *.ipr
 
 /vendor
+/dogs
 
 ### Binaries ###
 *-linux
