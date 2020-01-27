@@ -69,7 +69,7 @@ func RunDogDownloads(dogs string, baseDirectory string) error {
 			return
 		}
 		name := e.ChildText(header3)
-		dogName := strings.ToLower(name)
+		dogName := strings.ReplaceAll(strings.ToLower(name), "\"", "")
 		dogMatch := dogMap.IsMatch(dogName)
 		// If a match then create dir and description.txt file
 		if dogMatch {
