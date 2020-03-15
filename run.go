@@ -46,10 +46,7 @@ func RunDogDownloads(dogs string, baseDirectory string) error {
 	// Convert the comma sep list of dogs to a map
 	dogMap := createDogMap(dogs)
 	// Create the scrappers
-	availableDogs := colly.NewCollector(colly.Async(true))
-	if err := availableDogs.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 10}); err != nil {
-		return fmt.Errorf("failed to set parallel limit: %w", err)
-	}
+	availableDogs := colly.NewCollector()
 	dogPictures := availableDogs.Clone()
 
 	// Save the current dog to use when downloading pictures
@@ -136,10 +133,7 @@ func createDogMap(dogsList string) *sync.DogMap {
 // RunGetFosters looks up all the dogs that are foster-able and prints a comma separated list of the dogs.
 func RunGetFosters(baseDirectory string) error {
 	// Create the scrappers
-	availableDogs := colly.NewCollector(colly.Async(true))
-	if err := availableDogs.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 10}); err != nil {
-		return fmt.Errorf("failed to set parallel limit: %w", err)
-	}
+	availableDogs := colly.NewCollector()
 	dogPictures := availableDogs.Clone()
 
 	// List of dogs to be fostered
