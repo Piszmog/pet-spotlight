@@ -164,18 +164,18 @@ func RunGetFosters(baseDirectory string) error {
 		})
 		if strings.Contains(buttonName, fosterText) {
 			fosters.Add(dogName)
-		}
-		if len(baseDirectory) > 0 {
-			if err := io.MakeDir(baseDirectory + "/" + dogName); err != nil {
-				fmt.Println(err)
-				return
+			if len(baseDirectory) > 0 {
+				if err := io.MakeDir(baseDirectory + "/" + dogName); err != nil {
+					fmt.Println(err)
+					return
+				}
+				fullDescription := e.ChildText(petDescriptionClass)
+				var link string
+				dom.Find(petLinkClass).Each(func(i int, selection *goquery.Selection) {
+					link, _ = selection.Attr(urlLink)
+				})
+				handleDogDownload(fullDescription, link, baseDirectory, dogName, dogPictures)
 			}
-			fullDescription := e.ChildText(petDescriptionClass)
-			var link string
-			dom.Find(petLinkClass).Each(func(i int, selection *goquery.Selection) {
-				link, _ = selection.Attr(urlLink)
-			})
-			handleDogDownload(fullDescription, link, baseDirectory, dogName, dogPictures)
 		}
 	})
 
