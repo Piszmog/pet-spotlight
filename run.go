@@ -79,32 +79,8 @@ func RunDogDownloads(dogs string, baseDirectory string) error {
 			}
 			fmt.Println("Found", name)
 			fullDescription := e.ChildText(petDescriptionClass)
-			// Remove the adoption fee part
-			index := strings.Index(fullDescription, adoptionText)
-			var desc string
-			if index < 0 {
-				desc = fullDescription[:strings.Index(fullDescription, showLessText)]
-			} else {
-				desc = fullDescription[:index]
-			}
-			// Add the link for adopting
-			desc += "\n"
-			desc += defaultDescription
-			descFile := baseDirectory + "/" + dogName + "/description.txt"
-			if err := io.WriteFile(desc, descFile); err != nil {
-				fmt.Println(err)
-				return
-			}
-			// Get the link to the dog's page to download pictures
 			link := e.Attr(urlLink)
-			// Add the dog name to the context of the request
-			dogPictures.OnRequest(func(request *colly.Request) {
-				request.Ctx.Put(dogNameContext, dogName)
-			})
-			if err := dogPictures.Visit(link); err != nil {
-				fmt.Println(err)
-				return
-			}
+			handleDogDownload(fullDescription, link, baseDirectory, dogName, dogPictures)
 		}
 	})
 
@@ -157,27 +133,14 @@ func createDogMap(dogsList string) *sync.DogMap {
 	return sync.InitializeMap(selectedDogs)
 }
 
-func download(baseDirectory string, dogName string, fileName string, url string, b *wait.BoundedWaitGroup) {
-	defer b.Done()
-	directoryPath := fmt.Sprintf("%s/%s", baseDirectory, dogName)
-	if strings.HasSuffix(fileName, "png") {
-		if err := http.Download(url, directoryPath, fileName); err != nil {
-			fmt.Println(err)
-		}
-	} else {
-		if err := http.DownloadVideo(url, directoryPath, fileName); err != nil {
-			fmt.Println(err)
-		}
-	}
-}
-
 // RunGetFosters looks up all the dogs that are foster-able and prints a comma separated list of the dogs.
-func RunGetFosters() error {
+func RunGetFosters(baseDirectory string) error {
 	// Create the scrappers
 	availableDogs := colly.NewCollector(colly.Async(true))
 	if err := availableDogs.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 10}); err != nil {
 		return fmt.Errorf("failed to set parallel limit: %w", err)
 	}
+	dogPictures := availableDogs.Clone()
 
 	// List of dogs to be fostered
 	fosters := sync.DogList{}
@@ -202,10 +165,47 @@ func RunGetFosters() error {
 		if strings.Contains(buttonName, fosterText) {
 			fosters.Add(dogName)
 		}
+		if len(baseDirectory) > 0 {
+			if err := io.MakeDir(baseDirectory + "/" + dogName); err != nil {
+				fmt.Println(err)
+				return
+			}
+			fullDescription := e.ChildText(petDescriptionClass)
+			var link string
+			dom.Find(petLinkClass).Each(func(i int, selection *goquery.Selection) {
+				link, _ = selection.Attr(urlLink)
+			})
+			handleDogDownload(fullDescription, link, baseDirectory, dogName, dogPictures)
+		}
+	})
+
+	// When the dog page is loaded, download pictures
+	dogPictures.OnHTML(clientsId, func(e *colly.HTMLElement) {
+		dogName := e.Request.Ctx.Get(dogNameContext)
+		imageURLs := e.ChildAttrs(petGalleryClass, petGalleryURLAttribute)
+		videoURLs := e.ChildAttrs(petGalleryClass, linkAttribute)
+		// Save all the images
+		wg := wait.NewBoundedWaitGroup(5)
+		for index, imageURL := range imageURLs {
+			imageFile := fmt.Sprintf("image-%d.png", index)
+			wg.Add(1)
+			go download(baseDirectory, dogName, imageFile, imageURL, &wg)
+		}
+		for index, videoURL := range videoURLs {
+			videoFile := fmt.Sprintf("video-%d.mp4", index)
+			wg.Add(1)
+			go download(baseDirectory, dogName, videoFile, videoURL, &wg)
+		}
+		wg.Wait()
 	})
 
 	// Handle errors
 	availableDogs.OnError(func(r *colly.Response, err error) {
+		fmt.Printf("Request URL: %s, Status Code %d, Error %+v\n", r.Request.URL, r.StatusCode, err)
+	})
+
+	// Handle errors
+	dogPictures.OnError(func(r *colly.Response, err error) {
 		fmt.Printf("Request URL: %s, Status Code %d, Error %+v\n", r.Request.URL, r.StatusCode, err)
 	})
 
@@ -218,8 +218,50 @@ func RunGetFosters() error {
 		}
 	}
 	availableDogs.Wait()
+	dogPictures.Wait()
 	printDogs(fosters.Get())
 	return nil
+}
+
+func handleDogDownload(fullDescription string, link string, baseDirectory string, dogName string, dogPictures *colly.Collector) {
+	// Remove the adoption fee part
+	index := strings.Index(fullDescription, adoptionText)
+	var desc string
+	if index < 0 {
+		desc = fullDescription[:strings.Index(fullDescription, showLessText)]
+	} else {
+		desc = fullDescription[:index]
+	}
+	// Add the link for adopting
+	desc += "\n"
+	desc += defaultDescription
+	descFile := baseDirectory + "/" + dogName + "/description.txt"
+	if err := io.WriteFile(desc, descFile); err != nil {
+		fmt.Println(err)
+		return
+	}
+	// Get the link to the dog's page to download pictures
+	// Add the dog name to the context of the request
+	dogPictures.OnRequest(func(request *colly.Request) {
+		request.Ctx.Put(dogNameContext, dogName)
+	})
+	if err := dogPictures.Visit(link); err != nil {
+		fmt.Println(err)
+	}
+}
+
+func download(baseDirectory string, dogName string, fileName string, url string, b *wait.BoundedWaitGroup) {
+	defer b.Done()
+	directoryPath := fmt.Sprintf("%s/%s", baseDirectory, dogName)
+	if strings.HasSuffix(fileName, "png") {
+		if err := http.Download(url, directoryPath, fileName); err != nil {
+			fmt.Println(err)
+		}
+	} else {
+		if err := http.DownloadVideo(url, directoryPath, fileName); err != nil {
+			fmt.Println(err)
+		}
+	}
 }
 
 func printDogs(fosters []string) {

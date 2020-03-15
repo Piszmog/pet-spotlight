@@ -42,7 +42,13 @@ func main() {
 		}
 	}
 	if f.determineFosters {
-		if err := RunGetFosters(); err != nil {
+		if len(f.baseDirectory) > 0 {
+			// Create directory where the dog info will go
+			if err := io.MakeDir(f.baseDirectory); err != nil {
+				log.Fatalln(err)
+			}
+		}
+		if err := RunGetFosters(f.baseDirectory); err != nil {
 			log.Fatalln(err)
 		}
 	}
